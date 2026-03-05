@@ -2,9 +2,9 @@ import { useState, useCallback } from 'react';
 
 export const useGitState = () => {
   const [files, setFiles] = useState([
-    { name: 'index.html', status: 'tracked', staged: false, deleted: false, stagedDeletion: false },
-    { name: 'main.js', status: 'modified', staged: false, deleted: false, stagedDeletion: false },
-    { name: 'style.css', status: 'untracked', staged: false, deleted: false, stagedDeletion: false },
+    { name: 'index.html', status: 'tracked', staged: false, deleted: false, stagedDeletion: false, wasUntracked: false },
+    { name: 'main.js', status: 'modified', staged: false, deleted: false, stagedDeletion: false, wasUntracked: false },
+    { name: 'style.css', status: 'untracked', staged: false, deleted: false, stagedDeletion: false, wasUntracked: false },
   ]);
 
   const [history, setHistory] = useState([
@@ -14,8 +14,8 @@ export const useGitState = () => {
 
   const [activeCommit, setActiveCommit] = useState('c2');
   const [terminalOutput, setTerminalOutput] = useState([
-    { type: 'output', text: 'Git Learning Lab v1.3.1 initialized.' },
-    { type: 'output', text: 'Refined staging & removal transitions active.' }
+    { type: 'output', text: 'Git Learning Lab v1.4.1 initialized.' },
+    { type: 'output', text: 'Staging & Removal systems synchronized.' }
   ]);
 
   const addOutput = (type, text) => {
@@ -42,7 +42,7 @@ export const useGitState = () => {
             if (prev.some(f => f.name === args[0])) {
               return prev.map(f => f.name === args[0] ? { ...f, deleted: false, status: f.status === 'untracked' ? 'untracked' : 'modified' } : f);
             }
-            return [...prev, { name: args[0], status: 'untracked', staged: false, deleted: false, stagedDeletion: false }];
+            return [...prev, { name: args[0], status: 'untracked', staged: false, deleted: false, stagedDeletion: false, wasUntracked: false }];
           });
         }
         break;
@@ -57,18 +57,18 @@ export const useGitState = () => {
           
           let out = "On branch main\n";
           if (staged.length) {
-            out += `\nChanges to be committed:\n`;
+            out += `\nChanges to be committed:\n  (use "git restore --staged <file>..." to unstage)\n`;
             staged.forEach(f => {
               const statusLine = f.stagedDeletion ? `deleted:    ${f.name}` : (f.wasUntracked ? `new file:   ${f.name}` : `modified:   ${f.name}`);
               out += `\t${statusLine}\n`;
             });
           }
           if (modified.length || deletedNotStaged.length) {
-            out += `\nChanges not staged for commit:\n`;
+            out += `\nChanges not staged for commit:\n  (use "git add <file>..." to update what will be committed)\n  (use "git restore <file>..." to discard changes in working directory)\n`;
             modified.forEach(name => out += `\tmodified:   ${name}\n`);
             deletedNotStaged.forEach(f => out += `\tdeleted:    ${f.name}\n`);
           }
-          if (untracked.length) out += `\nUntracked files:\n\t${untracked.join('\n\t')}\n`;
+          if (untracked.length) out += `\nUntracked files:\n  (use "git add <file>..." to include in what will be committed)\n\t${untracked.join('\n\t')}\n`;
           if (!staged.length && !modified.length && !untracked.length && !deletedNotStaged.length) out += "nothing to commit, working tree clean";
           addOutput('output', out);
         } else if (sub === 'add') {
@@ -89,6 +89,27 @@ export const useGitState = () => {
             }
             return f;
           }));
+        } else if (sub === 'restore' && args[1] === '--staged') {
+          const target = args[2];
+          setFiles(prev => prev.map(f => {
+            if (target === '.' || target === '*' || f.name === target) {
+              if (f.stagedDeletion) return { ...f, stagedDeletion: false, deleted: false, status: f.status === 'untracked' ? 'untracked' : 'modified' };
+              if (f.wasUntracked) return { ...f, status: 'untracked', staged: false };
+              return { ...f, staged: false };
+            }
+            return f;
+          }));
+        } else if (sub === 'reset') {
+          const isHead = args[0]?.toUpperCase() === 'HEAD';
+          const target = isHead ? args[1] : args[0];
+          setFiles(prev => prev.map(f => {
+            if (target === '.' || target === '*' || f.name === target) {
+              if (f.stagedDeletion) return { ...f, stagedDeletion: false, deleted: false, status: f.status === 'untracked' ? 'untracked' : 'modified' };
+              if (f.wasUntracked) return { ...f, status: 'untracked', staged: false };
+              return { ...f, staged: false };
+            }
+            return f;
+          }));
         } else if (sub === 'rm') {
           let target = args[1];
           let cached = false;
@@ -105,10 +126,8 @@ export const useGitState = () => {
           setFiles(prev => prev.map(f => {
             if (f.name === target) {
               if (cached) {
-                // git rm --cached: keep in WD (deleted: false), move to untracked, stage deletion
                 return { ...f, status: 'untracked', stagedDeletion: true, staged: false, deleted: false };
               } else {
-                // git rm: remove from WD, stage deletion
                 return { ...f, deleted: true, stagedDeletion: true, staged: false };
               }
             }
@@ -131,7 +150,6 @@ export const useGitState = () => {
             setActiveCommit(newId);
             addOutput('output', `[main ${newId}] ${msg}\n ${stagedFiles.length} files changed`);
             
-            // Remove files that were committed as deleted
             return prev
               .filter(f => !f.stagedDeletion)
               .map(f => f.staged ? { ...f, status: 'tracked', staged: false, wasUntracked: false } : f);
@@ -163,19 +181,12 @@ export const useGitState = () => {
 
   const unstageFile = useCallback((name) => {
     setFiles(prev => prev.map(f => {
-        if (f.name === name) {
-            if (f.stagedDeletion && f.status === 'untracked') {
-                return { ...f, stagedDeletion: false, status: 'tracked' }; // or stay modified
-            }
-            if (f.stagedDeletion) {
-                return { ...f, stagedDeletion: false };
-            }
-            if (f.wasUntracked && !f.deleted) {
-                return { ...f, status: 'untracked', staged: false };
-            }
-            return { ...f, staged: false };
-        }
-        return f;
+      if (f.name === name) {
+        if (f.stagedDeletion) return { ...f, stagedDeletion: false, deleted: false, status: f.status === 'untracked' ? 'untracked' : 'modified' };
+        if (f.wasUntracked) return { ...f, status: 'untracked', staged: false };
+        return { ...f, staged: false };
+      }
+      return f;
     }));
   }, []);
 
