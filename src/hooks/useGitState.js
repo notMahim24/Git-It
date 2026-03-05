@@ -14,8 +14,8 @@ export const useGitState = () => {
 
   const [activeCommit, setActiveCommit] = useState('c2');
   const [terminalOutput, setTerminalOutput] = useState([
-    { type: 'output', text: 'Git Learning Lab v1.4.2 initialized.' },
-    { type: 'output', text: 'Git RM logic improved: untracked protection and persistence fix active.' }
+    { type: 'output', text: 'Git Learning Lab v1.4.3 initialized.' },
+    { type: 'output', text: 'Add-Remove cancellation logic active.' }
   ]);
 
   const addOutput = (type, text) => {
@@ -140,18 +140,32 @@ export const useGitState = () => {
               return;
           }
 
-          setFiles(prev => prev.map(f => {
-            if (f.name === target) {
-              if (cached) {
-                // git rm --cached: keep in WD (deleted: false), move to untracked, stage deletion
-                return { ...f, status: 'untracked', stagedDeletion: true, staged: false, deleted: false };
-              } else {
-                // git rm: remove from WD, stage deletion
-                return { ...f, deleted: true, stagedDeletion: true, staged: false };
+          setFiles(prev => {
+              const fileToRm = prev.find(f => f.name === target);
+              
+              // New Logic: If file was untracked (never in HEAD)
+              if (fileToRm.wasUntracked) {
+                  if (cached) {
+                      // git rm --cached a.txt: simply return to untracked state, cancel the add
+                      return prev.map(f => f.name === target ? { ...f, status: 'untracked', staged: false, stagedDeletion: false } : f);
+                  } else {
+                      // git rm a.txt: remove entirely (or mark deleted but not staged for commit)
+                      return prev.filter(f => f.name !== target);
+                  }
               }
-            }
-            return f;
-          }));
+
+              // Tracked files: Standard logic
+              return prev.map(f => {
+                if (f.name === target) {
+                  if (cached) {
+                    return { ...f, status: 'untracked', stagedDeletion: true, staged: false, deleted: false };
+                  } else {
+                    return { ...f, deleted: true, stagedDeletion: true, staged: false };
+                  }
+                }
+                return f;
+              });
+          });
           addOutput('output', `rm '${target}'`);
         } else if (sub === 'commit') {
           const msgIdx = args.indexOf('-m');
@@ -169,9 +183,6 @@ export const useGitState = () => {
             setActiveCommit(newId);
             addOutput('output', `[main ${newId}] ${msg}\n ${stagedFiles.length} files changed`);
             
-            // Refined commit logic:
-            // 1. Files staged for deletion (stagedDeletion) AND truly deleted (deleted: true) are removed.
-            // 2. Files staged for deletion (stagedDeletion) but NOT deleted (e.g., git rm --cached) remain as untracked.
             return prev
               .filter(f => !(f.stagedDeletion && f.deleted))
               .map(f => {
