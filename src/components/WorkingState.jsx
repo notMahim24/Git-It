@@ -13,9 +13,9 @@ const WorkingState = ({ gitState }) => {
     }
   };
 
-  const untrackedFiles = files.filter(f => f.status === 'untracked');
-  const trackedFiles = files.filter(f => f.status === 'tracked' || f.status === 'modified');
-  const stagedFiles = files.filter(f => f.staged);
+  const untrackedFiles = files.filter(f => f.status === 'untracked' && !f.deleted);
+  const trackedFiles = files.filter(f => (f.status === 'tracked' || f.status === 'modified') && !f.deleted);
+  const stagedFiles = files.filter(f => f.staged || f.stagedDeletion);
 
   const FileItem = ({ file, isStagedSection = false }) => (
     <motion.div
@@ -36,12 +36,19 @@ const WorkingState = ({ gitState }) => {
         border: isStagedSection ? '1px solid var(--border-glass)' : 'none',
         borderRadius: '2px',
         width: 'fit-content',
-        textShadow: isStagedSection ? '0 0 8px rgba(77, 147, 255, 0.4)' : 'none'
+        textShadow: isStagedSection ? '0 0 8px rgba(77, 147, 255, 0.4)' : 'none',
+        textDecoration: (isStagedSection && file.stagedDeletion) ? 'line-through' : 'none',
+        opacity: (isStagedSection && file.stagedDeletion) ? 0.7 : 1
       }}
     >
       {file.name}
-      {file.staged && !isStagedSection && (
+      {(file.staged || (file.stagedDeletion && !file.deleted)) && !isStagedSection && (
         <span style={{ fontSize: '10px', color: 'var(--color-staged)', opacity: 0.8 }}>[staged]</span>
+      )}
+      {isStagedSection && file.stagedDeletion && (
+        <span style={{ fontSize: (file.deleted ? '10px' : '9px'), color: 'var(--color-staged)', opacity: 0.8, textDecoration: 'none' }}>
+           {file.deleted ? '(deleted)' : '(untracked)'}
+        </span>
       )}
     </motion.div>
   );
@@ -85,7 +92,7 @@ const WorkingState = ({ gitState }) => {
         <h2 style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '16px', textTransform: 'uppercase', letterSpacing: '1px' }}>Staging Area</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <AnimatePresence>
-            {stagedFiles.map(file => <FileItem key={file.name} file={file} isStagedSection={true} />)}
+            {stagedFiles.map(file => <FileItem key={file.name + (file.stagedDeletion ? '_del' : '_stg')} file={file} isStagedSection={true} />)}
           </AnimatePresence>
           {stagedFiles.length === 0 && (
             <div style={{ color: 'var(--border-glass)', fontSize: '13px', fontStyle: 'italic' }}>Empty</div>
