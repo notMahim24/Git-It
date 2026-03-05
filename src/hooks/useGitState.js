@@ -14,13 +14,24 @@ export const useGitState = () => {
 
   const [activeCommit, setActiveCommit] = useState('c2');
   const [terminalOutput, setTerminalOutput] = useState([
-    { type: 'output', text: 'Git Learning Lab v1.4.1 initialized.' },
-    { type: 'output', text: 'Staging & Removal systems synchronized.' }
+    { type: 'output', text: 'Git Learning Lab v1.4.2 initialized.' },
+    { type: 'output', text: 'Git RM logic improved: untracked protection and persistence fix active.' }
   ]);
 
   const addOutput = (type, text) => {
     setTerminalOutput(prev => [...prev.slice(-50), { type, text }]);
   };
+
+  const unstageFile = useCallback((name) => {
+    setFiles(prev => prev.map(f => {
+      if (f.name === name) {
+        if (f.stagedDeletion) return { ...f, stagedDeletion: false, deleted: false, status: f.status === 'untracked' ? 'untracked' : 'modified' };
+        if (f.wasUntracked) return { ...f, status: 'untracked', staged: false };
+        return { ...f, staged: false };
+      }
+      return f;
+    }));
+  }, []);
 
   const executeCommand = useCallback((cmd) => {
     const parts = cmd.trim().split(/\s+/);
@@ -42,7 +53,7 @@ export const useGitState = () => {
             if (prev.some(f => f.name === args[0])) {
               return prev.map(f => f.name === args[0] ? { ...f, deleted: false, status: f.status === 'untracked' ? 'untracked' : 'modified' } : f);
             }
-            return [...prev, { name: args[0], status: 'untracked', staged: false, deleted: false, stagedDeletion: false, wasUntracked: false }];
+            return [...prev, { name: args[0], status: 'untracked', staged: false, deleted: false, stagedDeletion: false, wasUntracked: true }];
           });
         }
         break;
@@ -123,11 +134,19 @@ export const useGitState = () => {
             return;
           }
 
+          const targetFile = files.find(f => f.name === target);
+          if (!targetFile || (targetFile.status === 'untracked' && !targetFile.staged)) {
+              addOutput('output', `fatal: pathspec '${target}' did not match any files`);
+              return;
+          }
+
           setFiles(prev => prev.map(f => {
             if (f.name === target) {
               if (cached) {
+                // git rm --cached: keep in WD (deleted: false), move to untracked, stage deletion
                 return { ...f, status: 'untracked', stagedDeletion: true, staged: false, deleted: false };
               } else {
+                // git rm: remove from WD, stage deletion
                 return { ...f, deleted: true, stagedDeletion: true, staged: false };
               }
             }
@@ -141,8 +160,8 @@ export const useGitState = () => {
           setFiles(prev => {
             const stagedFiles = prev.filter(f => f.staged || f.stagedDeletion);
             if (stagedFiles.length === 0) {
-              addOutput('output', 'nothing to commit, working tree clean');
-              return prev;
+                addOutput('output', 'nothing to commit, working tree clean');
+                return prev;
             }
             
             const newId = 'c' + (Math.random().toString(36).substr(2, 4));
@@ -150,9 +169,20 @@ export const useGitState = () => {
             setActiveCommit(newId);
             addOutput('output', `[main ${newId}] ${msg}\n ${stagedFiles.length} files changed`);
             
+            // Refined commit logic:
+            // 1. Files staged for deletion (stagedDeletion) AND truly deleted (deleted: true) are removed.
+            // 2. Files staged for deletion (stagedDeletion) but NOT deleted (e.g., git rm --cached) remain as untracked.
             return prev
-              .filter(f => !f.stagedDeletion)
-              .map(f => f.staged ? { ...f, status: 'tracked', staged: false, wasUntracked: false } : f);
+              .filter(f => !(f.stagedDeletion && f.deleted))
+              .map(f => {
+                  if (f.stagedDeletion && !f.deleted) {
+                      return { ...f, status: 'untracked', stagedDeletion: false, wasUntracked: true };
+                  }
+                  if (f.staged) {
+                      return { ...f, status: 'tracked', staged: false, wasUntracked: false };
+                  }
+                  return f;
+              });
           });
         }
         break;
@@ -176,17 +206,6 @@ export const useGitState = () => {
             return { ...f, staged: true };
         }
         return f;
-    }));
-  }, []);
-
-  const unstageFile = useCallback((name) => {
-    setFiles(prev => prev.map(f => {
-      if (f.name === name) {
-        if (f.stagedDeletion) return { ...f, stagedDeletion: false, deleted: false, status: f.status === 'untracked' ? 'untracked' : 'modified' };
-        if (f.wasUntracked) return { ...f, status: 'untracked', staged: false };
-        return { ...f, staged: false };
-      }
-      return f;
     }));
   }, []);
 
