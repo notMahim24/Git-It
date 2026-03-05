@@ -14,8 +14,8 @@ export const useGitState = () => {
 
   const [activeCommit, setActiveCommit] = useState('c2');
   const [terminalOutput, setTerminalOutput] = useState([
-    { type: 'output', text: 'Git Learning Lab v1.1.0 initialized.' },
-    { type: 'output', text: 'Enhanced Working Directory state active.' }
+    { type: 'output', text: 'Git Learning Lab v1.2.0 initialized.' },
+    { type: 'output', text: 'Staging logic updated: Untracked files move to Tracked section.' }
   ]);
 
   const addOutput = (type, text) => {
@@ -40,7 +40,6 @@ export const useGitState = () => {
         if (args[0]) {
           setFiles(prev => {
             if (prev.some(f => f.name === args[0])) {
-              // Mark as modified if it exists
               return prev.map(f => f.name === args[0] ? { ...f, status: f.status === 'untracked' ? 'untracked' : 'modified' } : f);
             }
             return [...prev, { name: args[0], status: 'untracked', staged: false }];
@@ -72,8 +71,18 @@ export const useGitState = () => {
           const staged = files.filter(f => f.staged).map(f => f.name);
           
           let out = "On branch main\n";
-          if (staged.length) out += `\nChanges to be committed:\n\t${staged.join('\n\t')}\n`;
-          if (modified.length) out += `\nChanges not staged for commit:\n\t${modified.join('\n\t')}\n`;
+          if (staged.length) {
+            out += `\nChanges to be committed:\n`;
+            staged.forEach(name => {
+              const file = files.find(f => f.name === name);
+              // In this logic, if it was untracked and staged, it became 'modified' or similar
+              // but we need to know if it was originally untracked. 
+              // For simplicity, let's check a property he didn't ask for but we need.
+              const statusLine = file.wasUntracked ? `new file:   ${name}` : `modified:   ${name}`;
+              out += `\t${statusLine}\n`;
+            });
+          }
+          if (modified.length) out += `\nChanges not staged for commit:\n\tmodified:   ${modified.join('\n\tmodified:   ')}\n`;
           if (untracked.length) out += `\nUntracked files:\n\t${untracked.join('\n\t')}\n`;
           if (!staged.length && !modified.length && !untracked.length) out += "nothing to commit, working tree clean";
           addOutput('output', out);
@@ -85,17 +94,33 @@ export const useGitState = () => {
           }
           setFiles(prev => prev.map(f => {
             if (target === '.' || target === '*' || f.name === target) {
+              // If untracked, move to modified (tracked) and mark it was untracked
+              if (f.status === 'untracked') {
+                return { ...f, status: 'modified', staged: true, wasUntracked: true };
+              }
               return { ...f, staged: true };
             }
             return f;
           }));
+        } else if (sub === 'reset') {
+            // Add basic reset to demo un-staging
+            const target = args[0] === 'reset' ? args[1] : null;
+            setFiles(prev => prev.map(f => {
+                if (target === '.' || f.name === target) {
+                    if (f.wasUntracked) {
+                        return { ...f, status: 'untracked', staged: false, wasUntracked: true };
+                    }
+                    return { ...f, staged: false };
+                }
+                return f;
+            }));
         } else if (sub === 'commit') {
           const msgIdx = args.indexOf('-m');
           const msg = msgIdx !== -1 && args[msgIdx + 1] ? args.slice(msgIdx + 1).join(' ').replace(/"/g, '') : "update";
           
           setFiles(prev => {
-            const stagedCount = prev.filter(f => f.staged).length;
-            if (stagedCount === 0) {
+            const stagedFiles = prev.filter(f => f.staged);
+            if (stagedFiles.length === 0) {
               addOutput('output', 'nothing to commit, working tree clean');
               return prev;
             }
@@ -103,19 +128,10 @@ export const useGitState = () => {
             const newId = 'c' + (Math.random().toString(36).substr(2, 4));
             setHistory(hPrev => [...hPrev, { id: newId, message: msg, branch: 'main', parent: activeCommit }]);
             setActiveCommit(newId);
-            addOutput('output', `[main ${newId}] ${msg}\n ${stagedCount} files changed`);
+            addOutput('output', `[main ${newId}] ${msg}\n ${stagedFiles.length} files changed`);
             
-            return prev.map(f => f.staged ? { ...f, status: 'tracked', staged: false } : f);
+            return prev.map(f => f.staged ? { ...f, status: 'tracked', staged: false, wasUntracked: false } : f);
           });
-        } else if (sub === 'checkout') {
-          const target = args[1];
-          const commit = history.find(c => c.id === target || c.branch === target);
-          if (commit) {
-            setActiveCommit(commit.id);
-            addOutput('output', `Switched to commit ${commit.id}`);
-          } else {
-            addOutput('output', `error: pathspec '${target}' did not match any commit`);
-          }
         }
         break;
 
@@ -128,14 +144,38 @@ export const useGitState = () => {
     }
   }, [files, history, activeCommit]);
 
+  const stageFile = useCallback((name) => {
+    setFiles(prev => prev.map(f => {
+        if (f.name === name) {
+            if (f.status === 'untracked') {
+                return { ...f, status: 'modified', staged: true, wasUntracked: true };
+            }
+            return { ...f, staged: true };
+        }
+        return f;
+    }));
+  }, []);
+
+  const unstageFile = useCallback((name) => {
+    setFiles(prev => prev.map(f => {
+        if (f.name === name) {
+            if (f.wasUntracked) {
+                return { ...f, status: 'untracked', staged: false };
+            }
+            return { ...f, staged: false };
+        }
+        return f;
+    }));
+  }, []);
+
   return {
     files,
     history,
     activeCommit,
     terminalOutput,
     executeCommand,
-    stageFile: (name) => setFiles(prev => prev.map(f => f.name === name ? { ...f, staged: true } : f)),
-    unstageFile: (name) => setFiles(prev => prev.map(f => f.name === name ? { ...f, staged: false } : f)),
+    stageFile,
+    unstageFile,
     setActiveCommit
   };
 };

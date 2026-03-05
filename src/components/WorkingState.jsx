@@ -6,18 +6,10 @@ const WorkingState = ({ gitState }) => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'untracked': return 'var(--color-untracked)'; // Amber
-      case 'modified': return 'var(--color-modified)';   // Magenta
-      case 'tracked': return 'var(--text-secondary)';    // Gray (Unmodified)
+      case 'untracked': return 'var(--color-untracked)'; // Red
+      case 'modified': return 'var(--color-modified)';   // Green
+      case 'tracked': return 'var(--color-unmodified)';  // Gray
       default: return 'var(--text-secondary)';
-    }
-  };
-
-  const getStatusGlow = (status) => {
-    switch (status) {
-      case 'untracked': return 'glow-text-amber';
-      case 'modified': return 'glow-text-magenta';
-      default: return '';
     }
   };
 
@@ -32,7 +24,6 @@ const WorkingState = ({ gitState }) => {
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
       onClick={() => isStagedSection ? unstageFile(file.name) : stageFile(file.name)}
-      className={isStagedSection ? "glow-text-cyan" : getStatusGlow(file.status)}
       style={{ 
         color: isStagedSection ? 'var(--color-staged)' : getStatusColor(file.status),
         cursor: 'pointer',
@@ -44,7 +35,8 @@ const WorkingState = ({ gitState }) => {
         padding: isStagedSection ? '4px 8px' : '0',
         border: isStagedSection ? '1px solid var(--border-glass)' : 'none',
         borderRadius: '2px',
-        width: 'fit-content'
+        width: 'fit-content',
+        textShadow: isStagedSection ? '0 0 8px rgba(77, 147, 255, 0.4)' : 'none'
       }}
     >
       {file.name}

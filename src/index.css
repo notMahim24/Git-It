@@ -8,12 +8,13 @@
   --text-primary: #e2e2e4;
   --text-secondary: #88888e;
 
-  /* Git State Colors */
-  --color-untracked: #ffb86c; /* Amber */
-  --color-modified: #ff79c6; /* Magenta */
-  --color-staged: #8be9fd; /* Cyan */
-  --color-committed: #50fa7b; /* Green */
-  --color-active: #8be9fd; /* Cyan Ring */
+  /* Git State Colors - Final requested protocol */
+  --color-untracked: #ff5555;   /* Red */
+  --color-modified: #50fa7b;    /* Green */
+  --color-unmodified: #88888e;  /* Gray */
+  --color-staged: #4d93ff;      /* Blue */
+  --color-active: #4d93ff;      /* Blue highlighting */
+  --color-committed: #50fa7b;   /* Green for commit nodes */
 
   --font-mono: "JetBrains Mono", monospace;
 
