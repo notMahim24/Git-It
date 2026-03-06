@@ -17,41 +17,49 @@ const WorkingState = ({ gitState }) => {
   const trackedFiles = files.filter(f => (f.status === 'tracked' || f.status === 'modified') && !f.deleted);
   const stagedFiles = files.filter(f => f.staged || f.stagedDeletion);
 
-  const FileItem = ({ file, isStagedSection = false }) => (
-    <motion.div
-      layout
-      initial={{ opacity: 0, x: -10 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      onClick={() => isStagedSection ? unstageFile(file.name) : stageFile(file.name)}
-      style={{ 
-        color: isStagedSection ? 'var(--color-staged)' : getStatusColor(file.status),
-        cursor: 'pointer',
-        fontSize: '14px',
-        userSelect: 'none',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: isStagedSection ? '4px 8px' : '0',
-        border: isStagedSection ? '1px solid var(--border-glass)' : 'none',
-        borderRadius: '2px',
-        width: 'fit-content',
-        textShadow: isStagedSection ? '0 0 8px rgba(77, 147, 255, 0.4)' : 'none',
-        textDecoration: (isStagedSection && file.stagedDeletion) ? 'line-through' : 'none',
-        opacity: (isStagedSection && file.stagedDeletion) ? 0.7 : 1
-      }}
-    >
-      {file.name}
-      {(file.staged || (file.stagedDeletion && !file.deleted)) && !isStagedSection && (
-        <span style={{ fontSize: '10px', color: 'var(--color-staged)', opacity: 0.8 }}>[staged]</span>
-      )}
-      {isStagedSection && file.stagedDeletion && (
-        <span style={{ fontSize: (file.deleted ? '10px' : '9px'), color: 'var(--color-staged)', opacity: 0.8, textDecoration: 'none' }}>
-           {file.deleted ? '(deleted)' : '(untracked)'}
-        </span>
-      )}
-    </motion.div>
-  );
+  const FileItem = ({ file, isStagedSection = false }) => {
+    const isUnmodified = !isStagedSection && file.status === 'tracked' && !file.deleted && !file.stagedDeletion;
+
+    return (
+      <motion.div
+        layout
+        initial={{ opacity: 0, x: -10 }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        onClick={() => {
+          if (isUnmodified) return;
+          isStagedSection ? unstageFile(file.name) : stageFile(file.name);
+        }}
+        title={isUnmodified ? 'File is unmodified' : (isStagedSection ? `Unstage ${file.name}` : `Stage ${file.name}`)}
+        style={{ 
+          color: isStagedSection ? 'var(--color-staged)' : getStatusColor(file.status),
+          cursor: isUnmodified ? 'not-allowed' : 'pointer',
+          fontSize: '14px',
+          userSelect: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: isStagedSection ? '4px 8px' : '0',
+          border: isStagedSection ? '1px solid var(--border-glass)' : 'none',
+          borderRadius: '2px',
+          width: 'fit-content',
+          textShadow: isStagedSection ? '0 0 8px rgba(77, 147, 255, 0.4)' : 'none',
+          textDecoration: (isStagedSection && file.stagedDeletion) ? 'line-through' : 'none',
+          opacity: isUnmodified ? 0.6 : ((isStagedSection && file.stagedDeletion) ? 0.7 : 1)
+        }}
+      >
+        {file.name}
+        {(file.staged || (file.stagedDeletion && !file.deleted)) && !isStagedSection && (
+          <span style={{ fontSize: '10px', color: 'var(--color-staged)', opacity: 0.8 }}>[staged]</span>
+        )}
+        {isStagedSection && file.stagedDeletion && (
+          <span style={{ fontSize: (file.deleted ? '10px' : '9px'), color: 'var(--color-staged)', opacity: 0.8, textDecoration: 'none' }}>
+             {file.deleted ? '(deleted)' : '(untracked)'}
+          </span>
+        )}
+      </motion.div>
+    );
+  };
 
   return (
     <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', gap: '24px', padding: '24px', overflowY: 'auto' }}>
