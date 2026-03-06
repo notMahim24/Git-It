@@ -49,7 +49,7 @@ export const useGitState = () => {
     }));
   }, []);
 
-  const checkoutCommit = useCallback((targetId) => {
+  const checkoutCommit = useCallback((targetId, branchName = null) => {
     const targetCommit = history.find(c => c.id === targetId);
     if (!targetCommit) return false;
 
@@ -61,7 +61,7 @@ export const useGitState = () => {
       setCurrentBranch(branchName);
     } else {
       const matchingBranch = Object.keys(branchRefs).find(b => branchRefs[b] === targetId);
-      setCurrentBranch(matchingBranch || targetId);
+      setCurrentBranch(matchingBranch || targetCommit.branch);
     }
     return true;
   }, [history, branchRefs]);
