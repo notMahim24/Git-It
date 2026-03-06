@@ -158,7 +158,8 @@ export const useGitState = () => {
               const parentCommit = hPrev.find(c => c.id === parent);
               
               const newX = parentCommit ? parentCommit.x + 100 : hPrev.length * 100;
-              const newY = currentBranch === 'main' ? 0 : -40;
+              const branchIndex = branches.indexOf(currentBranch);
+              const newY = branchIndex !== -1 ? branchIndex * -60 : 0;
 
               return [...hPrev, { 
                 id: newId, 

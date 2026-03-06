@@ -1,7 +1,7 @@
 import React from 'react';
 import { useGitState } from '../hooks/useGitState';
 import WorkingState from './WorkingState';
-import GitHistory from './GitHistory';
+import HistoryGraph from './HistoryGraph';
 import Terminal from './Terminal';
 
 const Layout = () => {
@@ -21,7 +21,7 @@ const Layout = () => {
         gap: '24px'
       }}>
         <WorkingState gitState={gitState} />
-        <GitHistory gitState={gitState} />
+        <HistoryGraph gitState={gitState} />
       </div>
       <Terminal gitState={gitState} />
     </div>
