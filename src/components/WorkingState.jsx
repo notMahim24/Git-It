@@ -68,19 +68,17 @@ const WorkingState = ({ gitState }) => {
       <section>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <h2 style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '1px', margin: 0 }}>Working Directory</h2>
-          <div style={{ 
-            fontSize: '10px', 
-            background: 'rgba(77, 147, 255, 0.1)', 
-            color: 'var(--color-staged)', 
+          <span style={{ 
+            fontSize: '11px', 
+            background: 'var(--color-staged)', 
+            color: 'var(--bg-deep)', 
             padding: '2px 8px', 
-            borderRadius: '10px',
-            border: '1px solid rgba(77, 147, 255, 0.2)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px'
+            borderRadius: '12px', 
+            fontWeight: 'bold',
+            opacity: 0.9
           }}>
             <span style={{ opacity: 0.6 }}>branch:</span> {gitState.currentBranch}
-          </div>
+          </span>
         </div>
         
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', paddingLeft: '8px' }}>

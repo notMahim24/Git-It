@@ -8,11 +8,24 @@ export const useGitState = () => {
   ]);
 
   const [history, setHistory] = useState([
-    { id: 'c1', message: 'Initial commit', branch: 'main', parent: null, x: 0, y: 0 },
-    { id: 'c2', message: 'Add layout', branch: 'main', parent: 'c1', x: 100, y: 0 },
+    { 
+      id: 'c1', message: 'Initial commit', branch: 'main', parent: null, x: 0, y: 0,
+      snapshot: [
+        { name: 'index.html', status: 'tracked', staged: false, deleted: false, stagedDeletion: false, wasUntracked: false },
+        { name: 'main.js', status: 'tracked', staged: false, deleted: false, stagedDeletion: false, wasUntracked: false }
+      ]
+    },
+    { 
+      id: 'c2', message: 'Add layout', branch: 'main', parent: 'c1', x: 100, y: 0,
+      snapshot: [
+        { name: 'index.html', status: 'tracked', staged: false, deleted: false, stagedDeletion: false, wasUntracked: false },
+        { name: 'main.js', status: 'tracked', staged: false, deleted: false, stagedDeletion: false, wasUntracked: false },
+        { name: 'style.css', status: 'tracked', staged: false, deleted: false, stagedDeletion: false, wasUntracked: false }
+      ]
+    },
   ]);
 
-  const [branches, setBranches] = useState(['main']);
+  const [branchRefs, setBranchRefs] = useState({ main: 'c2' });
   const [currentBranch, setCurrentBranch] = useState('main');
   const [activeCommit, setActiveCommit] = useState('c2');
 
@@ -35,6 +48,23 @@ export const useGitState = () => {
       return f;
     }));
   }, []);
+
+  const checkoutCommit = useCallback((targetId) => {
+    const targetCommit = history.find(c => c.id === targetId);
+    if (!targetCommit) return false;
+
+    // Restore the exact file snapshot of that commit
+    setFiles(JSON.parse(JSON.stringify(targetCommit.snapshot)));
+    setActiveCommit(targetId);
+
+    if (branchName) {
+      setCurrentBranch(branchName);
+    } else {
+      const matchingBranch = Object.keys(branchRefs).find(b => branchRefs[b] === targetId);
+      setCurrentBranch(matchingBranch || targetId);
+    }
+    return true;
+  }, [history, branchRefs]);
 
   const executeCommand = useCallback((cmd) => {
     const parts = cmd.trim().split(/\s+/);
@@ -74,12 +104,12 @@ export const useGitState = () => {
         } else if (sub === 'branch') {
           const newBranch = args[1];
           if (!newBranch) {
-            addOutput('output', branches.map(b => b === currentBranch ? `* ${b}` : `  ${b}`).join('\n'));
+            addOutput('output', Object.keys(branchRefs).map(b => b === currentBranch ? `* ${b}` : `  ${b}`).join('\n'));
           } else {
-            if (branches.includes(newBranch)) {
+            if (branchRefs[newBranch]) {
               addOutput('output', `fatal: A branch named '${newBranch}' already exists.`);
             } else {
-              setBranches(prev => [...prev, newBranch]);
+              setBranchRefs(prev => ({ ...prev, [newBranch]: activeCommit }));
               addOutput('output', `Branch '${newBranch}' created.`);
             }
           }
@@ -95,19 +125,29 @@ export const useGitState = () => {
           }
 
           if (createNew) {
-            if (branches.includes(target)) {
-              addOutput('output', `fatal: A branch named '${target}' already exists.`);
+            if (branchRefs[target]) {
+               addOutput('output', `fatal: A branch named '${target}' already exists.`);
             } else {
-              setBranches(prev => [...prev, target]);
-              setCurrentBranch(target);
-              addOutput('output', `Switched to a new branch '${target}'`);
+               setBranchRefs(prev => ({ ...prev, [target]: activeCommit }));
+               setCurrentBranch(target); 
+               addOutput('output', `Switched to a new branch '${target}'`);
             }
           } else {
-            if (branches.includes(target)) {
-              setCurrentBranch(target);
-              addOutput('output', `Switched to branch '${target}'`);
+            // Target could be a branch or a commit hash
+            let hashToCheckout = null;
+            let isBranch = false;
+            
+            if (branchRefs[target]) {
+               hashToCheckout = branchRefs[target];
+               isBranch = true;
+            } else if (history.find(c => c.id === target)) {
+               hashToCheckout = target;
+            }
+
+            if (hashToCheckout && checkoutCommit(hashToCheckout, isBranch ? target : null)) {
+               addOutput('output', isBranch ? `Switched to branch '${target}'` : `Note: switching to '${target}'.\nYou are in 'detached HEAD' state.`);
             } else {
-              addOutput('output', `error: pathspec '${target}' did not match any file(s) known to git`);
+               addOutput('output', `error: pathspec '${target}' did not match any file(s) known to git`);
             }
           }
 
@@ -152,14 +192,27 @@ export const useGitState = () => {
             }
             
             const newId = 'c' + (Math.random().toString(36).substr(2, 4));
+            
+            const nextFiles = prev
+              .filter(f => !(f.stagedDeletion && f.deleted))
+              .map(f => {
+                  if (f.stagedDeletion && !f.deleted) return { ...f, status: 'untracked', stagedDeletion: false, wasUntracked: true };
+                  if (f.staged) return { ...f, status: 'tracked', staged: false, wasUntracked: false };
+                  return f;
+              });
+
             setHistory(hPrev => {
-              const lastOnBranch = [...hPrev].reverse().find(c => c.branch === currentBranch);
-              const parent = lastOnBranch ? lastOnBranch.id : activeCommit;
+              const parent = activeCommit;
               const parentCommit = hPrev.find(c => c.id === parent);
               
               const newX = parentCommit ? parentCommit.x + 100 : hPrev.length * 100;
-              const branchIndex = branches.indexOf(currentBranch);
-              const newY = branchIndex !== -1 ? branchIndex * -60 : 0;
+              const branchIndex = Object.keys(branchRefs).indexOf(currentBranch);
+              const newY = branchIndex !== -1 ? branchIndex * -60 : (parentCommit ? parentCommit.y : 0);
+
+              // The snapshot is only tracked files, not untracked or active modifications
+              const snapshot = nextFiles
+                .filter(f => f.status === 'tracked' && !f.deleted && !f.stagedDeletion)
+                .map(f => ({ ...f }));
 
               return [...hPrev, { 
                 id: newId, 
@@ -167,19 +220,19 @@ export const useGitState = () => {
                 branch: currentBranch, 
                 parent: parent,
                 x: newX,
-                y: newY
+                y: newY,
+                snapshot: snapshot
               }];
             });
             setActiveCommit(newId);
+            if (branchRefs[currentBranch]) {
+              setBranchRefs(prev => ({ ...prev, [currentBranch]: newId }));
+            } else {
+              setCurrentBranch(newId);
+            }
             addOutput('output', `[${currentBranch} ${newId}] ${msg}\n ${stagedFiles.length} files changed`);
             
-            return prev
-              .filter(f => !(f.stagedDeletion && f.deleted))
-              .map(f => {
-                  if (f.stagedDeletion && !f.deleted) return { ...f, status: 'untracked', stagedDeletion: false, wasUntracked: true };
-                  if (f.staged) return { ...f, status: 'tracked', staged: false, wasUntracked: false };
-                  return f;
-              });
+            return nextFiles;
           });
         } else if (sub === 'restore' && args[1] === '--staged') {
           const target = args[2];
@@ -260,7 +313,7 @@ export const useGitState = () => {
       default:
         addOutput('output', `command not found: ${base}`);
     }
-  }, [files, history, activeCommit, currentBranch, branches]);
+  }, [files, history, activeCommit, currentBranch, branchRefs, checkoutCommit]);
 
   const stageFile = useCallback((name) => {
     setFiles(prev => {
@@ -284,13 +337,15 @@ export const useGitState = () => {
   return {
     files,
     history,
-    branches,
+    branches: Object.keys(branchRefs),
+    branchRefs,
     currentBranch,
     activeCommit,
     terminalOutput,
     executeCommand,
     stageFile,
     unstageFile,
+    checkoutCommit,
     setActiveCommit
   };
 };

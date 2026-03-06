@@ -2,7 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import * as d3 from 'd3';
 
 const HistoryGraph = ({ gitState }) => {
-  const { history, activeCommit, currentBranch, branches } = gitState;
+  const { history, activeCommit, currentBranch, branches, branchRefs, checkoutCommit } = gitState;
   const svgRef = useRef();
 
   useEffect(() => {
@@ -23,21 +23,12 @@ const HistoryGraph = ({ gitState }) => {
       .domain(branches || ['main'])
       .range(['#50fa7b', '#bd93f9', '#ff79c6', '#8be9fd', '#f1fa8c', '#ffb86c']);
 
-    // Determine where each branch points (simulating Git branch refs)
+    // Determine where each branch points
     const branchHeads = {};
-    if (branches) {
-      branches.forEach(b => {
-        const lastCommit = [...history].reverse().find(c => c.branch === b);
-        if (lastCommit) {
-          if (!branchHeads[lastCommit.id]) branchHeads[lastCommit.id] = [];
-          branchHeads[lastCommit.id].push(b);
-        } else if (b === currentBranch) {
-          // If a new branch has no commits yet, it points to activeCommit
-          if (!branchHeads[activeCommit]) branchHeads[activeCommit] = [];
-          if (!branchHeads[activeCommit].includes(b)) {
-             branchHeads[activeCommit].push(b);
-          }
-        }
+    if (branchRefs) {
+      Object.entries(branchRefs).forEach(([bName, cId]) => {
+         if (!branchHeads[cId]) branchHeads[cId] = [];
+         branchHeads[cId].push(bName);
       });
     }
 
@@ -69,7 +60,13 @@ const HistoryGraph = ({ gitState }) => {
       .data(history)
       .join('g')
       .attr('class', 'node')
-      .attr('transform', d => `translate(${d.x}, ${d.y})`);
+      .attr('transform', d => `translate(${d.x}, ${d.y})`)
+      .style('cursor', 'pointer')
+      .on('click', (event, d) => {
+        if (checkoutCommit && d.id !== activeCommit) {
+           checkoutCommit(d.id);
+        }
+      });
 
     // Commit circle
     node.append('circle')
@@ -87,6 +84,30 @@ const HistoryGraph = ({ gitState }) => {
       .style('font-size', '10px')
       .style('font-family', 'monospace')
       .text(d => d.id);
+
+    // HEAD Pointer
+    node.filter(d => d.id === activeCommit)
+      .append('text')
+      .attr('dy', -35)
+      .attr('text-anchor', 'middle')
+      .attr('fill', 'var(--bg-deep)')
+      .style('font-size', '10px')
+      .style('font-weight', 'bold')
+      .style('background', 'var(--color-staged)')
+      .text('HEAD')
+      // Hack for visual background behind HEAD text in SVG
+      .each(function() {
+         const bbox = this.getBBox();
+         const padding = 2;
+         d3.select(this.parentNode).insert('rect', 'text')
+           .attr('x', bbox.x - padding)
+           .attr('y', bbox.y - padding)
+           .attr('width', bbox.width + padding * 2)
+           .attr('height', bbox.height + padding * 2)
+           .attr('rx', 3)
+           .attr('fill', 'var(--color-staged)');
+      })
+      .raise(); // ensure text is above rect
 
     // Branch tag labels
     const nodeWithLabels = node.filter(d => branchHeads[d.id] && branchHeads[d.id].length > 0);
