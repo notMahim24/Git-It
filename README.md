@@ -71,6 +71,10 @@ Try typing these in the interactive terminal:
 - `git restore --staged <file>`, `git rm <file>`
 - _And more helper commands like `clear`, `touch <file>`, and `ls`!_
 
+## 📜 License
+
+This project is licensed under the [MIT License](LICENSE).
+
 ---
 
 <div align="center">
