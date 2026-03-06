@@ -180,6 +180,26 @@ export const useGitState = () => {
                   return f;
               });
           });
+        } else if (sub === 'restore' && args[1] === '--staged') {
+          const target = args[2];
+          setFiles(prev => prev.map(f => {
+            if (target === '.' || target === '*' || f.name === target) {
+              if (f.stagedDeletion) return { ...f, stagedDeletion: false, deleted: false, status: f.status === 'untracked' ? 'untracked' : 'modified' };
+              if (f.wasUntracked) return { ...f, status: 'untracked', staged: false };
+              return { ...f, staged: false };
+            }
+            return f;
+          }));
+        } else if (sub === 'reset' && args[1]?.toLowerCase() === 'head') {
+          const target = args[2];
+          setFiles(prev => prev.map(f => {
+            if (!target || target === '.' || target === '*' || f.name === target) {
+              if (f.stagedDeletion) return { ...f, stagedDeletion: false, deleted: false, status: f.status === 'untracked' ? 'untracked' : 'modified' };
+              if (f.wasUntracked) return { ...f, status: 'untracked', staged: false };
+              return { ...f, staged: false };
+            }
+            return f;
+          }));
         } else if (sub === 'rm') {
           let target = args[1];
           let cached = false;
