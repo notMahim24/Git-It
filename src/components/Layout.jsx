@@ -23,7 +23,7 @@ const Layout = () => {
         {!gitState.isInitialized ? (
           <div className="glass-panel" style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)' }}>
             <h2 style={{ fontSize: '24px', marginBottom: '16px', color: 'var(--text-primary)' }}>Repository Not Initialized</h2>
-            <p>Type <code>git init</code> in the terminal below to start your Git Learning Lab session.</p>
+            <p>Type <code>git init</code> in the terminal below to start your Git It session.</p>
           </div>
         ) : (
           <>

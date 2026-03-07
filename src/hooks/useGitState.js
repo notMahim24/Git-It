@@ -11,7 +11,7 @@ export const useGitState = () => {
   const [activeCommit, setActiveCommit] = useState(null);
 
   const [terminalOutput, setTerminalOutput] = useState([
-    { type: 'output', text: 'Welcome to Git Learning Lab!\nPlease initialize your repository by typing: git init' }
+    { type: 'output', text: 'Welcome to Git It!\nPlease initialize your repository by typing: git init' }
   ]);
 
   const addOutput = (type, text) => {

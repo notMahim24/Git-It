@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🌳 Git Learning Lab
+# 🌳 Git It
 
 _A personal project built initially to teach myself the core concepts of Git._
 
