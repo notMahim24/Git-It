@@ -204,59 +204,60 @@ export const useGitState = () => {
             return;
           }
 
-          setFiles(prev => {
-            const stagedFiles = prev.filter(f => f.staged || f.stagedDeletion);
-            if (stagedFiles.length === 0) {
-              addOutput('output', 'nothing to commit, working tree clean');
-              return prev;
-            }
-            
-            const branchIndex = Object.keys(branchRefs).indexOf(currentBranch);
-            const prefix = String.fromCharCode(99 + (branchIndex !== -1 ? branchIndex : 0));
-            const branchCommitCount = history.filter(c => c.branch === currentBranch).length;
-            const newId = prefix + (branchCommitCount + 1);
-            
-            const nextFiles = prev
-              .filter(f => !(f.stagedDeletion && f.deleted))
-              .map(f => {
-                  if (f.stagedDeletion && !f.deleted) return { ...f, status: 'untracked', stagedDeletion: false, wasUntracked: true };
-                  if (f.staged) return { ...f, status: 'tracked', staged: false, wasUntracked: false };
-                  return f;
-              });
-
-            setHistory(hPrev => {
-              const parent = activeCommit;
-              const parentCommit = hPrev.find(c => c.id === parent);
-              
-              const newX = parentCommit ? parentCommit.x + 100 : hPrev.length * 100;
-              const branchIndex = Object.keys(branchRefs).indexOf(currentBranch);
-              const newY = branchIndex <= 0 ? 0 : (Math.ceil(branchIndex / 2) * 60 * (branchIndex % 2 === 0 ? 1 : -1));
-
-              // The snapshot is only tracked files, not untracked or active modifications
-              const snapshot = nextFiles
-                .filter(f => f.status === 'tracked' && !f.deleted && !f.stagedDeletion)
-                .map(f => ({ ...f }));
-
-              return [...hPrev, { 
-                id: newId, 
-                message: msg, 
-                branch: currentBranch, 
-                parent: parent,
-                x: newX,
-                y: newY,
-                snapshot: snapshot
-              }];
+          const stagedFiles = files.filter(f => f.staged || f.stagedDeletion);
+          if (stagedFiles.length === 0) {
+            addOutput('output', 'nothing to commit, working tree clean');
+            return;
+          }
+          
+          const branchIndex = Object.keys(branchRefs).indexOf(currentBranch);
+          const prefix = String.fromCharCode(99 + (branchIndex !== -1 ? branchIndex : 0));
+          const branchCommitCount = history.filter(c => c.branch === currentBranch).length;
+          const newId = prefix + (branchCommitCount + 1);
+          
+          const nextFiles = files
+            .filter(f => !(f.stagedDeletion && f.deleted))
+            .map(f => {
+                if (f.stagedDeletion && !f.deleted) return { ...f, status: 'untracked', stagedDeletion: false, wasUntracked: true };
+                if (f.staged) return { ...f, status: 'tracked', staged: false, wasUntracked: false };
+                return f;
             });
-            setActiveCommit(newId);
-            if (branchRefs[currentBranch]) {
-              setBranchRefs(prev => ({ ...prev, [currentBranch]: newId }));
-            } else {
-              setCurrentBranch(newId);
-            }
-            addOutput('output', `[${currentBranch} ${newId}] ${msg}\n ${stagedFiles.length} files changed`);
+
+          setHistory(hPrev => {
+            if (hPrev.some(c => c.id === newId)) return hPrev; // Guard for React StrictMode double-invocation
+
+            const parent = activeCommit;
+            const parentCommit = hPrev.find(c => c.id === parent);
             
-            return nextFiles;
+            const newX = parentCommit ? parentCommit.x + 100 : hPrev.length * 100;
+            const bIdx = Object.keys(branchRefs).indexOf(currentBranch);
+            const newY = bIdx <= 0 ? 0 : (Math.ceil(bIdx / 2) * 60 * (bIdx % 2 === 0 ? 1 : -1));
+
+            // The snapshot is only tracked files, not untracked or active modifications
+            const snapshot = nextFiles
+              .filter(f => f.status === 'tracked' && !f.deleted && !f.stagedDeletion)
+              .map(f => ({ ...f }));
+
+            return [...hPrev, { 
+              id: newId, 
+              message: msg, 
+              branch: currentBranch, 
+              parent: parent,
+              x: newX,
+              y: newY,
+              snapshot: snapshot
+            }];
           });
+
+          setActiveCommit(newId);
+          if (branchRefs[currentBranch]) {
+            setBranchRefs(prev => ({ ...prev, [currentBranch]: newId }));
+          } else {
+            setCurrentBranch(newId);
+          }
+          
+          addOutput('output', `[${currentBranch} ${newId}] ${msg}\n ${stagedFiles.length} files changed`);
+          setFiles(nextFiles);
         } else if (sub === 'restore' && args[1] === '--staged') {
           const target = args[2];
           setFiles(prev => prev.map(f => {
