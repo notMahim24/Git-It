@@ -184,6 +184,11 @@ export const useGitState = () => {
           const msgIdx = args.indexOf('-m');
           const msg = msgIdx !== -1 && args[msgIdx + 1] ? args.slice(msgIdx + 1).join(' ').replace(/"/g, '') : "update";
           
+          if (branchRefs[currentBranch] !== activeCommit) {
+            addOutput('output', `fatal: You are not at the tip of a branch.\nPlease create a new branch using 'git checkout -b <branch-name>' before committing your changes.`);
+            return;
+          }
+
           setFiles(prev => {
             const stagedFiles = prev.filter(f => f.staged || f.stagedDeletion);
             if (stagedFiles.length === 0) {
