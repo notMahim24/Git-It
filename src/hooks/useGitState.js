@@ -1,37 +1,16 @@
 import { useState, useCallback } from 'react';
 
 export const useGitState = () => {
-  const [files, setFiles] = useState([
-    { name: 'index.html', status: 'tracked', staged: false, deleted: false, stagedDeletion: false, wasUntracked: false },
-    { name: 'main.js', status: 'modified', staged: false, deleted: false, stagedDeletion: false, wasUntracked: false },
-    { name: 'style.css', status: 'untracked', staged: false, deleted: false, stagedDeletion: false, wasUntracked: false },
-  ]);
+  const [files, setFiles] = useState([]);
 
-  const [history, setHistory] = useState([
-    { 
-      id: 'c1', message: 'Initial commit', branch: 'main', parent: null, x: 0, y: 0,
-      snapshot: [
-        { name: 'index.html', status: 'tracked', staged: false, deleted: false, stagedDeletion: false, wasUntracked: false },
-        { name: 'main.js', status: 'tracked', staged: false, deleted: false, stagedDeletion: false, wasUntracked: false }
-      ]
-    },
-    { 
-      id: 'c2', message: 'Add layout', branch: 'main', parent: 'c1', x: 100, y: 0,
-      snapshot: [
-        { name: 'index.html', status: 'tracked', staged: false, deleted: false, stagedDeletion: false, wasUntracked: false },
-        { name: 'main.js', status: 'tracked', staged: false, deleted: false, stagedDeletion: false, wasUntracked: false },
-        { name: 'style.css', status: 'tracked', staged: false, deleted: false, stagedDeletion: false, wasUntracked: false }
-      ]
-    },
-  ]);
+  const [history, setHistory] = useState([]);
 
-  const [branchRefs, setBranchRefs] = useState({ main: 'c2' });
+  const [branchRefs, setBranchRefs] = useState({ main: null });
   const [currentBranch, setCurrentBranch] = useState('main');
-  const [activeCommit, setActiveCommit] = useState('c2');
+  const [activeCommit, setActiveCommit] = useState(null);
 
   const [terminalOutput, setTerminalOutput] = useState([
-    { type: 'output', text: 'Git Learning Lab v1.5.1 initialized.' },
-    { type: 'output', text: 'Staging restricted: only modified or untracked files can be added.' }
+    { type: 'output', text: 'Git Learning Lab initialized.\nHint: Use `touch <filename>` to create a file, then `git add` and `git commit`!' }
   ]);
 
   const addOutput = (type, text) => {
