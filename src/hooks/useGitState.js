@@ -75,6 +75,28 @@ export const useGitState = () => {
         const sub = args[0];
         if (sub === 'init') {
           addOutput('output', `Reinitialized existing Git repository in /home/user/project/.git/`);
+        } else if (sub === 'commands') {
+          const helpText = `Available Commands:
+  git init                  - Initialize a new Git repository
+  git status                - Show the working tree status
+  git add <file>/.          - Add file contents to the index
+  git commit -m "<msg>"     - Record changes to the repository
+  git branch                - List, create, or delete branches
+  git branch <name>         - Create a new branch
+  git branch -d <name>      - Delete a branch
+  git checkout <branch>     - Switch branches or restore files
+  git checkout -b <name>    - Create and switch to a new branch
+  git switch <branch>       - Switch branches
+  git switch -c <name>      - Create and switch to a new branch
+  git restore --staged <f>  - Restore file in index from HEAD
+  git reset HEAD <file>     - Remove file from the staging area
+  git rm <file>             - Remove file from the working tree
+  git rm --cached <file>    - Stop tracking a file
+  touch <file>              - Create a file or update timestamp
+  ls                        - List directory contents
+  clear                     - Clear the terminal screen
+  git commands              - Show this help message`;
+          addOutput('output', helpText);
         } else if (sub === 'status') {
           const untracked = files.filter(f => f.status === 'untracked' && !f.staged && !f.deleted && !f.stagedDeletion).map(f => f.name);
           const modified = files.filter(f => f.status === 'modified' && !f.staged && !f.deleted).map(f => f.name);
