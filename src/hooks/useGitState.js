@@ -335,7 +335,7 @@ export const useGitState = () => {
       default:
         addOutput('output', `command not found: ${base}`);
     }
-  }, [files, history, activeCommit, currentBranch, branchRefs, checkoutCommit]);
+  }, [isInitialized, files, history, activeCommit, currentBranch, branchRefs, checkoutCommit]);
 
   const stageFile = useCallback((name) => {
     setFiles(prev => {
