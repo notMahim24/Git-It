@@ -213,23 +213,24 @@ export const useGitState = () => {
           }
 
         } else if (sub === 'add') {
-          const target = args[1];
-          if (!target) {
+          const targets = args.slice(1);
+          if (targets.length === 0) {
             addOutput('output', 'Nothing specified, nothing added.');
             return;
           }
 
           setFiles(prev => {
-            const affected = prev.filter(f => (target === '.' || target === '*' || f.name === target));
+            const hasAll = targets.includes('.') || targets.includes('*');
+            const affected = prev.filter(f => (hasAll || targets.includes(f.name)));
             const hasModified = affected.some(f => f.status === 'modified' || f.status === 'untracked' || f.deleted);
             
-            if (!hasModified && target !== '.' && target !== '*') {
-              addOutput('output', `Nothing to add for '${target}' (tracked and unmodified).`);
+            if (!hasModified && !hasAll) {
+              addOutput('output', `Nothing to add for '${targets.join(', ')}' (tracked and unmodified).`);
               return prev;
             }
 
             return prev.map(f => {
-              if (target === '.' || target === '*' || f.name === target) {
+              if (hasAll || targets.includes(f.name)) {
                 // Guard: Only stage if not unmodified tracked
                 if (f.status === 'tracked' && !f.deleted && !f.stagedDeletion) return f;
                 
