@@ -250,11 +250,8 @@ export const useGitState = () => {
           });
 
           setActiveCommit(newId);
-          if (branchRefs[currentBranch]) {
-            setBranchRefs(prev => ({ ...prev, [currentBranch]: newId }));
-          } else {
-            setCurrentBranch(newId);
-          }
+          setBranchRefs(prev => ({ ...prev, [currentBranch]: newId }));
+
           
           addOutput('output', `[${currentBranch} ${newId}] ${msg}\n ${stagedFiles.length} files changed`);
           setFiles(nextFiles);
