@@ -9,7 +9,6 @@ const HistoryGraph = ({ gitState }) => {
     if (!history || history.length === 0) return;
 
     const margin = { top: 60, right: 60, bottom: 60, left: 60 };
-    const width = 800 - margin.left - margin.right;
     const height = 400 - margin.top - margin.bottom;
 
     const svg = d3.select(svgRef.current);
@@ -69,7 +68,6 @@ const HistoryGraph = ({ gitState }) => {
       .attr('class', 'link')
       .attr('d', d => {
         const dx = d.target.x - d.source.x;
-        const dy = d.target.y - d.source.y;
         return `M${d.source.x},${d.source.y} C${d.source.x + dx/2},${d.source.y} ${d.source.x + dx/2},${d.target.y} ${d.target.x},${d.target.y}`;
       })
       .attr('fill', 'none')
@@ -149,7 +147,7 @@ const HistoryGraph = ({ gitState }) => {
         return heads.join(', ');
       });
 
-  }, [history, activeCommit, currentBranch, branches]);
+  }, [history, activeCommit, currentBranch, branches, branchRefs, checkoutCommit]);
 
   return (
     <div className="glass-panel" style={{ height: '100%', position: 'relative', overflowX: 'auto', overflowY: 'hidden' }}>

@@ -71,7 +71,7 @@ export const useGitState = () => {
     }
 
     switch (base) {
-      case 'git':
+      case 'git': {
         const sub = args[0];
         if (sub === 'init') {
           addOutput('output', `Reinitialized existing Git repository in /home/user/project/.git/`);
@@ -358,6 +358,7 @@ export const useGitState = () => {
           addOutput('output', `rm '${target}'`);
         }
         break;
+      }
 
       case 'ls':
         addOutput('output', files.filter(f => !f.deleted).map(f => f.name).join('  '));
