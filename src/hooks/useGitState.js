@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 
 export const useGitState = () => {
+  const [isInitialized, setIsInitialized] = useState(false);
   const [files, setFiles] = useState([]);
 
   const [history, setHistory] = useState([]);
@@ -10,7 +11,7 @@ export const useGitState = () => {
   const [activeCommit, setActiveCommit] = useState(null);
 
   const [terminalOutput, setTerminalOutput] = useState([
-    { type: 'output', text: 'Git Learning Lab initialized.\nHint: Use `touch <filename>` to create a file, then `git add` and `git commit`!' }
+    { type: 'output', text: 'Welcome to Git Learning Lab!\nPlease initialize your repository by typing: git init' }
   ]);
 
   const addOutput = (type, text) => {
@@ -54,10 +55,27 @@ export const useGitState = () => {
 
     addOutput('input', cmd);
 
+    if (base === 'clear') {
+      setTerminalOutput([]);
+      return;
+    }
+
+    if (!isInitialized) {
+      if (base === 'git' && args[0] === 'init') {
+        setIsInitialized(true);
+        addOutput('output', `Initialized empty Git repository in /home/user/project/.git/`);
+      } else {
+        addOutput('output', `fatal: not a git repository. Please type 'git init' to start.`);
+      }
+      return;
+    }
+
     switch (base) {
       case 'git':
         const sub = args[0];
-        if (sub === 'status') {
+        if (sub === 'init') {
+          addOutput('output', `Reinitialized existing Git repository in /home/user/project/.git/`);
+        } else if (sub === 'status') {
           const untracked = files.filter(f => f.status === 'untracked' && !f.staged && !f.deleted && !f.stagedDeletion).map(f => f.name);
           const modified = files.filter(f => f.status === 'modified' && !f.staged && !f.deleted).map(f => f.name);
           const staged = files.filter(f => f.staged || f.stagedDeletion);
@@ -311,9 +329,8 @@ export const useGitState = () => {
         }
         break;
 
-      case 'clear':
-        setTerminalOutput([]);
-        break;
+    // Clear logic moved up to immediately execute without being gated by initialization
+
 
       default:
         addOutput('output', `command not found: ${base}`);
@@ -340,6 +357,7 @@ export const useGitState = () => {
   }, []);
 
   return {
+    isInitialized,
     files,
     history,
     branches: Object.keys(branchRefs),
