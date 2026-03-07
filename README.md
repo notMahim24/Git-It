@@ -77,6 +77,18 @@ This project is licensed under the [MIT License](LICENSE).
 
 ---
 
+## 📸 Screenshots
+
+<div align="center">
+  <img src="assets/g1.png" alt="Git It Screenshot 1" width="800" />
+  <br/><br/>
+  <img src="assets/g2.png" alt="Git It Screenshot 2" width="800" />
+  <br/><br/>
+  <img src="assets/g3.png" alt="Git It Screenshot 3" width="800" />
+</div>
+
+<br/>
+
 <div align="center">
   <i>Built to make Git click for everyone.</i>
 </div>
