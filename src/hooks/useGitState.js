@@ -196,7 +196,10 @@ export const useGitState = () => {
               return prev;
             }
             
-            const newId = 'c' + (Math.random().toString(36).substr(2, 4));
+            const branchIndex = Object.keys(branchRefs).indexOf(currentBranch);
+            const prefix = String.fromCharCode(99 + (branchIndex !== -1 ? branchIndex : 0));
+            const branchCommitCount = history.filter(c => c.branch === currentBranch).length;
+            const newId = prefix + (branchCommitCount + 1);
             
             const nextFiles = prev
               .filter(f => !(f.stagedDeletion && f.deleted))
@@ -212,7 +215,7 @@ export const useGitState = () => {
               
               const newX = parentCommit ? parentCommit.x + 100 : hPrev.length * 100;
               const branchIndex = Object.keys(branchRefs).indexOf(currentBranch);
-              const newY = branchIndex !== -1 ? branchIndex * -60 : (parentCommit ? parentCommit.y : 0);
+              const newY = branchIndex <= 0 ? 0 : (Math.ceil(branchIndex / 2) * 60 * (branchIndex % 2 === 0 ? 1 : -1));
 
               // The snapshot is only tracked files, not untracked or active modifications
               const snapshot = nextFiles
