@@ -92,11 +92,35 @@ export const useGitState = () => {
   git reset HEAD <file>     - Remove file from the staging area
   git rm <file>             - Remove file from the working tree
   git rm --cached <file>    - Stop tracking a file
+  git log                   - Show commit history
   touch <file>              - Create a file or update timestamp
   ls                        - List directory contents
   clear                     - Clear the terminal screen
   git commands              - Show this help message`;
           addOutput('output', helpText);
+        } else if (sub === 'log') {
+          if (!activeCommit) {
+            addOutput('output', `fatal: your current branch '${currentBranch}' does not have any commits yet`);
+          } else {
+            let curr = activeCommit;
+            let logLines = [];
+            while (curr) {
+               const commit = history.find(c => c.id === curr);
+               if (!commit) break;
+               
+               // Determine any branch tags pointing to this commit
+               const tags = Object.keys(branchRefs).filter(b => branchRefs[b] === commit.id);
+               let tagStr = '';
+               if (curr === activeCommit) tags.unshift('HEAD');
+               if (tags.length > 0) {
+                 tagStr = ` (${tags.join(', ')})`;
+               }
+
+               logLines.push(`* ${commit.id}${tagStr} - ${commit.message}`);
+               curr = commit.parent;
+            }
+            addOutput('output', logLines.join('\n'));
+          }
         } else if (sub === 'status') {
           const untracked = files.filter(f => f.status === 'untracked' && !f.staged && !f.deleted && !f.stagedDeletion).map(f => f.name);
           const modified = files.filter(f => f.status === 'modified' && !f.staged && !f.deleted).map(f => f.name);
