@@ -32,8 +32,30 @@ const HistoryGraph = ({ gitState }) => {
       });
     }
 
+    // Filter out commits that belong to deleted branches (dangling commits)
+    const reachableCommits = new Set();
+    const traverseReachable = (commitId) => {
+      if (!commitId || reachableCommits.has(commitId)) return;
+      reachableCommits.add(commitId);
+      const commit = history.find(c => c.id === commitId);
+      if (commit && commit.parent) {
+        traverseReachable(commit.parent);
+      }
+    };
+    
+    if (branchRefs) {
+      Object.keys(branchRefs).forEach(bName => {
+         traverseReachable(branchRefs[bName]);
+      });
+    }
+    
+    // Always include activeCommit so the HEAD isn't left floating blindly
+    traverseReachable(activeCommit);
+
+    const visibleHistory = history.filter(c => reachableCommits.has(c.id));
+
     // Prepare link data
-    const links = history
+    const links = visibleHistory
       .filter(d => d.parent)
       .map(d => {
         const source = history.find(p => p.id === d.parent);
@@ -57,7 +79,7 @@ const HistoryGraph = ({ gitState }) => {
 
     // Draw Nodes
     const node = g.selectAll('.node')
-      .data(history)
+      .data(visibleHistory)
       .join('g')
       .attr('class', 'node')
       .attr('transform', d => `translate(${d.x}, ${d.y})`)

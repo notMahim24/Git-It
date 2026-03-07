@@ -102,16 +102,34 @@ export const useGitState = () => {
           addOutput('output', out);
 
         } else if (sub === 'branch') {
-          const newBranch = args[1];
-          if (!newBranch) {
-            addOutput('output', Object.keys(branchRefs).map(b => b === currentBranch ? `* ${b}` : `  ${b}`).join('\n'));
+          if (args[1] === '-d' || args[1] === '-D') {
+             const target = args[2];
+             if (!target) {
+               addOutput('output', `error: branch name required`);
+             } else if (!branchRefs[target]) {
+               addOutput('output', `error: branch '${target}' not found.`);
+             } else if (target === currentBranch) {
+               addOutput('output', `error: Cannot delete branch '${target}' checked out at '${activeCommit}'`);
+             } else {
+               setBranchRefs(prev => {
+                 const updated = { ...prev };
+                 delete updated[target];
+                 return updated;
+               });
+               addOutput('output', `Deleted branch ${target} (was ${branchRefs[target]}).`);
+             }
           } else {
-            if (branchRefs[newBranch]) {
-              addOutput('output', `fatal: A branch named '${newBranch}' already exists.`);
-            } else {
-              setBranchRefs(prev => ({ ...prev, [newBranch]: activeCommit }));
-              addOutput('output', `Branch '${newBranch}' created.`);
-            }
+             const newBranch = args[1];
+             if (!newBranch) {
+               addOutput('output', Object.keys(branchRefs).map(b => b === currentBranch ? `* ${b}` : `  ${b}`).join('\n'));
+             } else {
+               if (branchRefs[newBranch]) {
+                 addOutput('output', `fatal: A branch named '${newBranch}' already exists.`);
+               } else {
+                 setBranchRefs(prev => ({ ...prev, [newBranch]: activeCommit }));
+                 addOutput('output', `Branch '${newBranch}' created.`);
+               }
+             }
           }
 
         } else if (sub === 'checkout' || sub === 'switch') {
