@@ -21,6 +21,13 @@ const LEVEL_DEFINITIONS = [
     description: "Commits are snapshots of your project. Record your changes permanently.",
     objective: "Run `git commit -m \"Initial commit\"` to create your first commit.",
     validate: (state) => state.history.length > 0
+  },
+  {
+    id: 4,
+    title: "Branching Out",
+    description: "Branches let you develop features in isolation. Create a new branch and switch to it.",
+    objective: "Run `git branch feature` followed by `git checkout feature`.",
+    validate: (state) => state.currentBranch === 'feature'
   }
 ];
 
@@ -425,7 +432,7 @@ export const useGitState = (mode = 'free') => {
     if (mode === 'game' && currentLevel && !complete) {
       if (currentLevel.validate({ isInitialized, files, history, activeCommit, currentBranch, branchRefs })) {
         setComplete(true);
-        addOutput('output', `\n🌟 LEVEL COMPLETE: ${currentLevel.title}!\nType 'next' to continue to the next level.`);
+        addOutput('output', `\n🌟 LEVEL COMPLETE: ${currentLevel.title}!\nClick 'Next Level' above or type 'next' to continue.`);
       }
     }
   }, [mode, currentLevel, complete, isInitialized, files, history, activeCommit, currentBranch, branchRefs]);
@@ -454,10 +461,10 @@ export const useGitState = (mode = 'free') => {
       const nextIdx = currentLevelIdx + 1;
       setCurrentLevelIdx(nextIdx);
       setComplete(false);
-      resetState();
       
       const nextLevelData = LEVEL_DEFINITIONS[nextIdx];
-      setTerminalOutput([
+      setTerminalOutput(prev => [
+        ...prev,
         { type: 'output', text: `\n--- LEVEL ${nextLevelData.id}: ${nextLevelData.title} ---\n${nextLevelData.description}\nObjective: ${nextLevelData.objective}` }
       ]);
     }

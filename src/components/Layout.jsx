@@ -12,7 +12,7 @@ const Layout = ({ mode = 'free', onBack }) => {
   return (
     <div style={{ 
       display: 'grid', 
-      gridTemplateRows: mode === 'game' ? 'auto 1fr 200px' : '1fr 200px', 
+      gridTemplateRows: 'auto 1fr 200px', 
       height: '100vh', 
       padding: '24px',
       gap: '24px'
@@ -58,7 +58,25 @@ const Layout = ({ mode = 'free', onBack }) => {
               </span>
             </div>
             {gitState.isLevelComplete ? (
-              <CheckCircle size={24} color="var(--color-modified)" />
+              <button 
+                onClick={gitState.nextLevel}
+                style={{
+                  background: 'var(--color-modified)',
+                  border: 'none',
+                  color: 'black',
+                  padding: '8px 16px',
+                  borderRadius: '4px',
+                  fontWeight: 'bold',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  boxShadow: '0 0 15px rgba(80, 250, 123, 0.3)'
+                }}
+              >
+                Next Level
+                <CheckCircle size={18} />
+              </button>
             ) : (
               <Info size={24} color="var(--color-active)" />
             )}
@@ -73,7 +91,7 @@ const Layout = ({ mode = 'free', onBack }) => {
         gridTemplateColumns: 'minmax(300px, 1fr) 2fr', 
         gap: '24px'
       }}>
-        {!gitState.isInitialized && mode === 'free' ? (
+        {!gitState.isInitialized ? (
           <div className="glass-panel" style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', color: 'var(--text-secondary)' }}>
             <h2 style={{ fontSize: '24px', marginBottom: '16px', color: 'var(--text-primary)' }}>Repository Not Initialized</h2>
             <p>Type <code>git init</code> in the terminal below to start your Git It session.</p>
