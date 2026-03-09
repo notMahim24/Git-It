@@ -1,6 +1,32 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 
-export const useGitState = () => {
+const LEVEL_DEFINITIONS = [
+  {
+    id: 1,
+    title: "The First Step",
+    description: "Every great project starts somewhere. Initialize your repository to begin.",
+    objective: "Run `git init` to initialize the repository.",
+    validate: (state) => state.isInitialized
+  },
+  {
+    id: 2,
+    title: "Staging Area",
+    description: "Git needs to know which files you want to track. Create a file and add it to the staging area.",
+    objective: "Create `index.html` and use `git add index.html` to stage it.",
+    validate: (state) => state.files.some(f => f.name === 'index.html' && f.staged)
+  },
+  {
+    id: 3,
+    title: "Forever Record",
+    description: "Commits are snapshots of your project. Record your changes permanently.",
+    objective: "Run `git commit -m \"Initial commit\"` to create your first commit.",
+    validate: (state) => state.history.length > 0
+  }
+];
+
+export const useGitState = (mode = 'free') => {
+  const [currentLevelIdx, setCurrentLevelIdx] = useState(0);
+  const [complete, setComplete] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
   const [files, setFiles] = useState([]);
 
@@ -10,8 +36,15 @@ export const useGitState = () => {
   const [currentBranch, setCurrentBranch] = useState('main');
   const [activeCommit, setActiveCommit] = useState(null);
 
+  const currentLevel = mode === 'game' ? LEVEL_DEFINITIONS[currentLevelIdx] : null;
+
   const [terminalOutput, setTerminalOutput] = useState([
-    { type: 'output', text: 'Welcome to Git It!\nPlease initialize your repository by typing: git init' }
+    { 
+      type: 'output', 
+      text: mode === 'game' 
+        ? `LEVEL ${currentLevel.id}: ${currentLevel.title}\n${currentLevel.description}\nObjective: ${currentLevel.objective}`
+        : 'Welcome to Git It!\nPlease initialize your repository by typing: git init' 
+    }
   ]);
 
   const addOutput = (type, text) => {
@@ -67,6 +100,11 @@ export const useGitState = () => {
       } else {
         addOutput('output', `fatal: not a git repository. Please type 'git init' to start.`);
       }
+      return;
+    }
+
+    if (mode === 'game' && complete && base === 'next') {
+      nextLevel();
       return;
     }
 
@@ -383,6 +421,15 @@ export const useGitState = () => {
     }
   }, [isInitialized, files, history, activeCommit, currentBranch, branchRefs, checkoutCommit]);
 
+  useEffect(() => {
+    if (mode === 'game' && currentLevel && !complete) {
+      if (currentLevel.validate({ isInitialized, files, history, activeCommit, currentBranch, branchRefs })) {
+        setComplete(true);
+        addOutput('output', `\n🌟 LEVEL COMPLETE: ${currentLevel.title}!\nType 'next' to continue to the next level.`);
+      }
+    }
+  }, [mode, currentLevel, complete, isInitialized, files, history, activeCommit, currentBranch, branchRefs]);
+
   const stageFile = useCallback((name) => {
     setFiles(prev => {
         const file = prev.find(f => f.name === name);
@@ -402,6 +449,29 @@ export const useGitState = () => {
     });
   }, []);
 
+  const nextLevel = useCallback(() => {
+    if (currentLevelIdx < LEVEL_DEFINITIONS.length - 1) {
+      const nextIdx = currentLevelIdx + 1;
+      setCurrentLevelIdx(nextIdx);
+      setComplete(false);
+      resetState();
+      
+      const nextLevelData = LEVEL_DEFINITIONS[nextIdx];
+      setTerminalOutput([
+        { type: 'output', text: `\n--- LEVEL ${nextLevelData.id}: ${nextLevelData.title} ---\n${nextLevelData.description}\nObjective: ${nextLevelData.objective}` }
+      ]);
+    }
+  }, [currentLevelIdx]);
+
+  const resetState = useCallback(() => {
+    setIsInitialized(false);
+    setFiles([]);
+    setHistory([]);
+    setBranchRefs({ main: null });
+    setCurrentBranch('main');
+    setActiveCommit(null);
+  }, []);
+
   return {
     isInitialized,
     files,
@@ -415,6 +485,11 @@ export const useGitState = () => {
     stageFile,
     unstageFile,
     checkoutCommit,
-    setActiveCommit
+    setActiveCommit,
+    // Game Mode extras
+    currentLevel,
+    isLevelComplete: complete,
+    nextLevel,
+    resetState
   };
 };
